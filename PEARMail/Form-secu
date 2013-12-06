@@ -1,0 +1,444 @@
+<script>
+	$(function() {
+		$( "#dialog:ui-dialog" ).dialog( "destroy" );
+	
+		$( "#dialog-message" ).dialog({
+			modal: true,
+			buttons: {
+				Ok: function() {
+					$( this ).dialog( "close" );
+				}
+			}
+		});
+	});
+</script>
+
+ 
+  
+<?php 
+
+  error_reporting(E_ALL);
+  
+  
+	/*
+		********************************************************************************************
+		CONFIGURATION
+		********************************************************************************************
+	*/
+  require_once "Mail.php";
+  
+  $host = ';
+  $username = '';
+  $password = '';
+
+	$copie = 'oui';
+	
+	$form_action = '';
+	
+	$message_envoye = "Thank you for your input. We'll get back to you as soon as possible."; 
+	$message_non_envoye = "Due to a technical problem <br>
+                      Sorry for the inconveniences caused."; 
+	$message_formulaire_invalide = "The following error(s) occurred: - email must contain an e-mail address";
+
+    
+    /*  
+		********************************************************************************************
+		End config
+		********************************************************************************************
+	*/
+	/*
+	 * 
+	 */
+   
+	function Rec($text)
+	{
+		$text = trim($text); // delete white spaces after & before text
+		if (1 === get_magic_quotes_gpc())
+		{
+			$stripslashes = create_function('$txt', 'return stripslashes($txt);');
+		}
+		else
+		{
+			$stripslashes = create_function('$txt', 'return $txt;');
+		}
+		// magic quotes ?
+		$text = $stripslashes($text);
+		$text = htmlspecialchars($text, ENT_QUOTES); // converts to string with " and ' as well
+		$text = nl2br($text);
+		return $text;
+	};
+	/*
+	 * 
+	 */
+	function IsEmail($email)
+	{
+		$pattern = "^([a-z0-9_]|\\-|\\.)+@(([a-z0-9_]|\\-)+\\.)+[a-z]{2,7}$^";
+		return (preg_match($pattern,$email)) ? true : false;
+	};
+	$err_formulaire = false; 
+  $firstname = (isset($_POST['firstname']))  ? Rec($_POST['firstname'])  : '';
+  $lastname  = (isset($_POST['lastname']))   ? Rec($_POST['lastname'])   : '';
+  $telephone = (isset($_POST['telephone']))  ? Rec($_POST['telephone'])  : '';
+	$adress    = (isset($_POST['adress']))     ? Rec($_POST['adress'])     : '';
+  $city      = (isset($_POST['city']))       ? Rec($_POST['city'])       : '';
+  $zip       = (isset($_POST['zip']))        ? Rec($_POST['zip'])        : '';
+  $country   = (isset($_POST['country']))    ? Rec($_POST['country'])    : '';
+  $email     = (isset($_POST['email']))      ? Rec($_POST['email'])      : '';
+	$function  = (isset($_POST['function']))   ? Rec($_POST['function'])   : '';
+	$remarks   = (isset($_POST['remarks']))    ? Rec($_POST['remarks'])    : '';
+	if (isset($_POST['send']))
+	{
+  	
+		$email = (IsEmail($email)) ? $email : ''; 
+		$err_formulaire = (IsEmail($email)) ? false : true;
+		if (($firstname != '') && ($lastname != '') && ($telephone != '') && ($adress != '') && ($city != '') && ($zip != '') && ($country != '') && ($email != '') && ($function != '') && ($remarks != ''))
+		{  
+		$from = "Contact : $email";
+    $to = 'Mailbox contact';
+    $subject = "Message émanant de la rubrique contact du site internet "; 
+    $body = "> NOM : ".htmlspecialchars($_POST['lastname'])." \n> PRENOM : ".htmlspecialchars($_POST['firstname'])." \n> TELEPHONE : ".htmlspecialchars($_POST['telephone'])." \n> ADRESSE : ".htmlspecialchars($_POST['adress'])." \n> VILLE : ".htmlspecialchars($_POST['city'])." \n> CODE POSTAL : ".htmlspecialchars($_POST['zip'])." \n> PAYS : ".htmlspecialchars($_POST['country'])." \n> E-MAIL : ".htmlspecialchars($_POST['email'])." \n> POSTE : ".htmlspecialchars($_POST['function'])." \n> MESSAGE : ".htmlspecialchars($_POST['remarks']). "\n";
+    	// les 4 variables sont remplies, on génère puis envoie le mail
+    $headers = array ('From' => $from,
+    'To' => $to,
+    'Subject' => $subject);
+    $smtp = Mail::factory('smtp',
+    array ('host' => $host,
+    'auth' => true,
+    'username' => $username,
+    'password' => $password));
+
+			if ($copie == 'oui')
+			{
+				$cible = $from.','.$email;
+			}
+			else
+			{
+				$cible = $from;
+			};
+		
+			$remarks = html_entity_decode($remarks);
+			$remarks = str_replace('&#039;',"'",$remarks);
+			$remarks = str_replace('&#8217;',"'",$remarks);
+			$remarks = str_replace('<br>','',$remarks);
+			$remarks = str_replace('<br />','',$remarks);
+	
+			if ($mail = $smtp->send($to, $headers, $body))   
+			{
+				echo '<p>'.$message_envoye.'</p>'."\n";
+			}
+			else
+			{
+				echo '<p>'.$message_non_envoye.'</p>'."\n";
+			};
+		}
+     if (PEAR::isError($mail)) 
+		{
+		
+			echo '<p>'.$message_formulaire_invalide.' <a href="contact.php"></a></p>'."\n";
+			$err_formulaire = true;
+		};
+	}; // fin du if (!isset($_POST['envoi']))
+	if (($err_formulaire) || (!isset($_POST['send'])))
+	{
+  	// afficher le formulaire -Form-
+    echo '<table width="416" border="0" align="left" cellpadding="0" cellspacing="0" class="bg"><tr> <td width="416" align="center" valign="top"> <div align="center"></div><div align="center">'."\n"; 
+		echo ' <form id="documentation" method="post" action="'.$form_action.'">'."\n";
+    echo '  <input type="hidden" name="fieldsToDisplay" value="gender;firstname;lastname;telephone;adress;zip;city;country;email;job_function;remarks" ID="Hidden7">'."\n";
+		echo '	 <TABLE width=408 border=0 align="left" cellPadding=0 cellSpacing=0 class="content"><TBODY><TR vAlign=top><TD height="30" colspan="2">'."\n";
+    echo '	 '."\n";
+    echo '		<label for="gender"> <span class="small"></span></label><br>'."\n";		
+    echo '    <select id="gender" name="gender" value="gender">'."\n";
+    echo '          <option value="" selected>Mr./Mrs</option>'."\n";
+    echo '          <option value="Mr">Mr.</option>'."\n";
+    echo '          <option value="Mrs">Mrs</option>'."\n";
+    echo '   </select>'."\n";	
+    echo '   </TD></TR><TR vAlign=top><TD width="208" height="40">'."\n";
+    echo '	 <label for="firstname"><br> <span class="small">First name:</span></label><br>'."\n";
+		echo '   <input type="text" id="firstname" name="firstname" value="'.stripslashes($firstname).'" size=25 />'."\n";
+    echo '	 </TD><TD width="220" height="40"><span class="small">'."\n";
+    echo '	 <label for="lastname"> <br><span class="small">Last name:</span></label><br>'."\n";
+    echo '   <input type="text" id="lastname" name="lastname" value="'.stripslashes($lastname).'" size=25 />'."\n";
+		echo '	 </TD></TR><TR vAlign=top> <TD height="40" colspan="2">'."\n";
+    echo '   <label for="telephone"><br><span class="small">Téléphone: </span> </label><br>'."\n";
+    echo '   <input type="text" id="telephone" name="telephone" value="'.stripslashes($telephone).'" tabindex="2" class="txt" size=25 />'."\n";
+   	echo '    </TD></TR><TR vAlign=top><TD height="40" colspan="2">'."\n";
+    echo '	 <label for="adress"><br><span class="small">Adress:</span> </label><br>'."\n";
+    echo '   <input type="text" id="adress" name="adress" value="'.stripslashes($adress).'" tabindex="2" class="txt" size=25 />'."\n";
+   	echo '	 </TD></TR><TR vAlign=top><TD height="40">'."\n";
+   	echo '	 <label for="city"><br><span class="small">City: </span> </label><br>'."\n";
+    echo '   <input type="text" id="city" name="city" value="'.stripslashes($city).'" tabindex="2" class="txt" size=25 />'."\n";
+		echo '	 </TD><TD height="40">'."\n";
+    echo '	 <label for="zip"><br><span class="small">ZIP code:</span> </label><br>'."\n";
+    echo '   <input type="text" id="zip" name="zip" value="'.stripslashes($zip).'" tabindex="2" class="txt" size=25 />'."\n";
+    echo '	 </TD></TR><TR vAlign=top> <TD height="30" colspan="2">'."\n";
+    echo '   <label for="country"><br><span class="small">Country:</span> </label><br>'."\n";
+		echo '   <select class="formClass" id="country" name="country" value="'.stripslashes($country).'">'."\n";
+    echo '                                            <option value="selected"></option>'."\n";
+    echo '                                            <option value="af">Afghanistan</option>'."\n";
+    echo '                                            <option value="al">Albania</option>'."\n";
+    echo '                                            <option value="dz">Algeria</option>'."\n";
+    echo '                                            <option value="as">American Samoa</option>'."\n";
+    echo '                                            <option value="ad">Andorra</option>'."\n";
+    echo '                                            <option value="ao">Angola</option>'."\n";
+    echo '                                            <option value="ai">Anguilla</option>'."\n";
+    echo '                                            <option value="aq">Antarctica</option>'."\n";
+    echo '                                            <option value="ag">Antigua and Barbuda</option>'."\n";
+    echo '                                            <option value="ar">Argentina</option>'."\n";
+    echo '                                            <option value="am">Armenia</option>'."\n";
+    echo '                                            <option value="aw">Aruba</option>'."\n";
+    echo '                                            <option value="ac">Ascension </option>'."\n";
+    echo '                                            <option value="au">Australia</option>'."\n";
+    echo '                                            <option value="at">Austria</option>'."\n";
+    echo '                                            <option value="az">Azerbaijan</option>'."\n";
+    echo '                                            <option value="bs">Bahamas</option>'."\n";
+    echo '                                            <option value="bh">Bahrain</option>'."\n";
+    echo '                                            <option value="bd">Bangladesh</option>'."\n";
+    echo '                                            <option value="bb">Barbados</option>'."\n";
+    echo '                                            <option value="by">Belarus</option>'."\n";
+    echo '                                            <option value="be">Belgium</option>'."\n";
+    echo '                                            <option value="bz">Belize</option>'."\n";
+    echo '                                            <option value="bj">Benin</option>'."\n";
+    echo '                                            <option value="bm">Bermuda</option>'."\n";
+    echo '                                            <option value="bt">Bhutan</option>'."\n";
+    echo '                                            <option value="bo">Bolivia</option>'."\n";
+    echo '                                            <option value="ba">Bosnia and Herzegowina</option>'."\n";
+    echo '                                            <option value="bw">Botswana</option>'."\n";
+    echo '                                            <option value="bv">Bouvet Island</option>'."\n";
+    echo '                                            <option value="br">Brazil</option>'."\n";
+    echo '                                            <option value="io">British Indian Ocean Territor</option>'."\n";
+    echo '                                            <option value="bn">Brunei Darussalam</option>'."\n";
+    echo '                                            <option value="bg">Bulgaria</option>'."\n";
+    echo '                                            <option value="bf">Burkina Faso</option>'."\n";
+    echo '                                            <option value="bi">Burundi</option>'."\n";
+    echo '                                            <option value="kh">Cambodia</option>'."\n";
+    echo '                                            <option value="cm">Cameroon</option>'."\n";
+    echo '                                            <option value="ca">Canada</option>'."\n";
+    echo '                                            <option value="cv">Cape Verde</option>'."\n";
+    echo '                                            <option value="ky">Cayman Islands</option>'."\n";
+    echo '                                            <option value="cf">Central African Republic</option>'."\n";
+    echo '                                            <option value="td">Chad</option>'."\n";
+    echo '                                            <option value="cl">Chile</option>'."\n";
+    echo '                                            <option value="cn">China</option>'."\n";
+    echo '                                            <option value="cx">Christmas Island</option>'."\n";
+    echo '                                            <option value="cc">Cocos (Keeling) Islands</option>'."\n";
+    echo '                                            <option value="co">Colombia</option>'."\n";
+    echo '                                            <option value="km">Comoros</option>'."\n";
+    echo '                                            <option value="cg">Congo</option>'."\n";
+    echo '                                            <option value="ck">Cook Islands</option>'."\n";
+    echo '                                            <option value="cr">Costa Rica</option>'."\n";
+    echo '                                            <option value="ci">Cote d Ivoire</option>'."\n";
+    echo '                                            <option value="hr">Croatia</option>'."\n";
+    echo '                                            <option value="cu">Cuba</option>'."\n";
+    echo '                                            <option value="cy">Cyprus</option>'."\n";
+    echo '                                            <option value="cz">Czech Republic</option>'."\n";
+    echo '                                            <option value="cs">Czechoslovakia</option>'."\n";
+    echo '                                            <option value="dk">Denmark</option>'."\n";
+    echo '                                            <option value="dj">Djibouti</option>'."\n";
+    echo '                                            <option value="dm">Dominica</option>'."\n";
+    echo '                                            <option value="do">Dominican Republic</option>'."\n";
+    echo '                                            <option value="tp">East Timor</option>'."\n";
+    echo '                                            <option value="ec">Ecuador</option>'."\n";
+    echo '                                            <option value="eg">Egypt</option>'."\n";
+    echo '                                            <option value="sv">El Salvador</option>'."\n";
+    echo '                                            <option value="gq">Equatorial Guinea</option>'."\n";
+    echo '                                            <option value="er">Eritrea</option>'."\n";
+    echo '                                            <option value="ee">Estonia</option>'."\n";
+    echo '                                            <option value="et">Ethiopia</option>'."\n";
+    echo '                                            <option value="fk">Falkland Islands</option>'."\n";
+    echo '                                            <option value="fo">Faroe Islands</option>'."\n";
+    echo '                                            <option value="fj">Fiji</option>'."\n";
+    echo '                                            <option value="fi">Finland</option>'."\n";
+    echo '                                            <option value="fr">France</option>'."\n";
+    echo '                                            <option value="gf">French Guiana</option>'."\n";
+    echo '                                            <option value="pf">French Polynesia</option>'."\n";
+    echo '                                            <option value="tf">French Southern Territories</option>'."\n";
+    echo '                                            <option value="ga">Gabon</option>'."\n";
+    echo '                                            <option value="gm">Gambia</option>'."\n";
+    echo '                                            <option value="com">General - Commercial</option>'."\n";
+    echo '                                            <option value="net">General - IT Networks</option>'."\n";
+    echo '                                            <option value="org">General - Organizations</option>'."\n";
+    echo '                                            <option value="ge">Georgia</option>'."\n";
+    echo '                                            <option value="de">Germany</option>'."\n";
+    echo '                                            <option value="gh">Ghana</option>'."\n";
+    echo '                                            <option value="gi">Gibraltar</option>'."\n";
+    echo '                                            <option value="gr">Greece</option>'."\n";
+    echo '                                            <option value="gl">Greenland</option>'."\n";
+    echo '                                            <option value="gd">Grenada</option>'."\n";
+    echo '                                            <option value="gp">Guadeloupe</option>'."\n";
+    echo '                                            <option value="gu">Guam</option>'."\n";
+    echo '                                            <option value="gt">Guatemala</option>'."\n";
+    echo '                                            <option value="gg">Guernsey</option>'."\n";
+    echo '                                            <option value="gn">Guinea</option>'."\n";
+    echo '                                            <option value="gw">Guinea-Bissau</option>'."\n";
+    echo '                                            <option value="gy">Guyana</option>'."\n";
+    echo '                                            <option value="ht">Haiti</option>'."\n";
+    echo '                                            <option value="hm">Heard and McDonald Islands</option>'."\n";
+    echo '                                            <option value="va">Holy See Vatican City State</option>'."\n";
+    echo '                                            <option value="hn">Honduras</option>'."\n";
+    echo '                                            <option value="hk">Hong Kong</option>'."\n";
+    echo '                                            <option value="hu">Hungary</option>'."\n";
+    echo '                                            <option value="is">Iceland</option>'."\n";
+    echo '                                            <option value="in">India</option>'."\n";
+    echo '                                            <option value="id">Indonesia</option>'."\n";
+    echo '                                            <option value="ir">Iran</option>'."\n";
+    echo '                                            <option value="iq">Iraq</option>'."\n";
+    echo '                                            <option value="ie">Ireland</option>'."\n";
+    echo '                                            <option value="im">Isle of Man</option>'."\n";
+    echo '                                            <option value="il">Israel</option>'."\n";
+    echo '                                            <option value="it">Italy</option>'."\n";
+    echo '                                            <option value="jm">Jamaica</option>'."\n";
+    echo '                                            <option value="jp">Japan</option>'."\n";
+    echo '                                            <option value="je">Jersey</option>'."\n";
+    echo '                                            <option value="jo">Jordan</option>'."\n";
+    echo '                                            <option value="kz">Kazakhstan</option>'."\n";
+    echo '                                            <option value="ke">Kenya</option>'."\n";
+    echo '                                            <option value="ki">Kiribati</option>'."\n";
+    echo '                                            <option value="kp">Korea, Democratic People</option>'."\n";
+    echo '                                            <option value="kr">Korea, Republic of</option>'."\n";
+    echo '                                            <option value="kw">Kuwait</option>'."\n";
+    echo '                                            <option value="kg">Kyrgystan</option>'."\n";
+    echo '                                            <option value="la">Lao People Democratic</option>'."\n";
+    echo '                                            <option value="lv">Latvia</option>'."\n";
+    echo '                                            <option value="lb">Lebanon</option>'."\n";
+    echo '                                            <option value="ls">Lesotho</option>'."\n";
+    echo '                                            <option value="lr">Liberia</option>'."\n";
+    echo '                                            <option value="ly">Libyan Arab Jamahiriya</option>'."\n";
+    echo '                                            <option value="li">Liechtenstein</option>'."\n";
+    echo '                                            <option value="lt">Lithuania</option>'."\n";
+    echo '                                            <option value="lu">Luxembourg</option>'."\n";
+    echo '                                            <option value="mo">Macau</option>'."\n";
+    echo '                                            <option value="mk">Macedonia</option>'."\n";
+    echo '                                            <option value="mg">Madagascar</option>'."\n";
+    echo '                                            <option value="mw">Malawi</option>'."\n";
+    echo '                                            <option value="my">Malaysia</option>'."\n";
+    echo '                                            <option value="mv">Maldives</option>'."\n";
+    echo '                                            <option value="ml">Mali</option>'."\n";
+    echo '                                            <option value="mt">Malta</option>'."\n";
+    echo '                                            <option value="mh">Marshall Islands</option>'."\n";
+    echo '                                            <option value="mq">Martinique</option>'."\n";
+    echo '                                            <option value="mr">Mauritania</option>'."\n";
+    echo '                                            <option value="mu">Mauritius</option>'."\n";
+    echo '                                            <option value="yt">Mayotte</option>'."\n";
+    echo '                                            <option value="mx">Mexico</option>'."\n";
+    echo '                                            <option value="fm">Micronesia</option>'."\n";
+    echo '                                            <option value="md">Moldova</option>'."\n";
+    echo '                                            <option value="mc">Monaco</option>'."\n";
+    echo '                                            <option value="mn">Mongolia</option>'."\n";
+    echo '                                            <option value="ms">Montserrat</option>'."\n";
+    echo '                                            <option value="ma">Morocco</option>'."\n";
+    echo '                                            <option value="mz">Mozambique</option>'."\n";
+    echo '                                            <option value="mm">Myanmar</option>'."\n";
+    echo '                                            <option value="na">Namibia</option>'."\n";
+    echo '                                            <option value="nr">Nauru</option>'."\n";
+    echo '                                            <option value="np">Nepal</option>'."\n";
+    echo '                                            <option value="an">Netherlands Antilles</option>'."\n";
+    echo '                                            <option value="nc">New Caledonia</option>'."\n";
+    echo '                                            <option value="nz">New Zealand</option>'."\n";
+    echo '                                            <option value="ni">Nicaragua</option>'."\n";
+    echo '                                            <option value="ne">Niger</option>'."\n";
+    echo '                                            <option value="ng">Nigeria</option>'."\n";
+    echo '                                            <option value="nu">Niue</option>'."\n";
+    echo '                                            <option value="nf">Norfolk Island</option>'."\n";
+    echo '                                            <option value="mp">Northern Mariana Islands</option>'."\n";
+    echo '                                            <option value="no">Norway</option>'."\n";
+    echo '                                            <option value="om">Oman</option>'."\n";
+    echo '                                            <option value="pk">Pakistan</option>'."\n";
+    echo '                                            <option value="pw">Palau</option>'."\n";
+    echo '                                            <option value="ps">Palestine</option>'."\n";
+    echo '                                            <option value="pa">Panama</option>'."\n";
+    echo '                                            <option value="pg">Papua New Guinea</option>'."\n";
+    echo '                                            <option value="py">Paraguay</option>'."\n";
+    echo '                                            <option value="pe">Peru</option>'."\n";
+    echo '                                            <option value="ph">Philippines</option>'."\n";
+    echo '                                            <option value="pn">Pitcairn</option>'."\n";
+    echo '                                            <option value="pl">Poland</option>'."\n";
+    echo '                                            <option value="pt">Portugal</option>'."\n";
+    echo '                                            <option value="pr">Puerto Rico</option>'."\n";
+    echo '                                            <option value="qa">Qatar</option>'."\n";
+    echo '                                            <option value="re">Reunion</option>'."\n";
+    echo '                                            <option value="ro">Romania</option>'."\n";
+    echo '                                            <option value="ru">Russia</option>'."\n";
+    echo '                                            <option value="rw">Rwanda</option>'."\n";
+    echo '                                            <option value="kn">Saint Kitts and Nevis</option>'."\n";
+    echo '                                            <option value="lc">Saint Lucia</option>'."\n";
+    echo '                                            <option value="vc">Saint Vincent and the Grenadi</option>'."\n";
+    echo '                                            <option value="ws">Samoa</option>'."\n";
+    echo '                                            <option value="sm">San Marino</option>'."\n";
+    echo '                                            <option value="st">Sao Tome and Principe</option>'."\n";
+    echo '                                            <option value="sa">Saudi Arabia</option>'."\n";
+    echo '                                            <option value="sn">Senegal</option>'."\n";
+    echo '                                            <option value="sc">Seychelles</option>'."\n";
+    echo '                                            <option value="sl">Sierra Leone</option>'."\n";
+    echo '                                            <option value="sg">Singapore</option>'."\n";
+    echo '                                            <option value="sk">Slovakia</option>'."\n";
+    echo '                                            <option value="si">Slovenia</option>'."\n";
+    echo '                                            <option value="sb">Solomon Islands</option>'."\n";
+    echo '                                            <option value="so">Somalia</option>'."\n";
+    echo '                                            <option value="za">South Africa</option>'."\n";
+    echo '                                            <option value="gs">South Georgia and the South</option>'."\n";
+    echo '                                            <option value="es">Spain</option>'."\n";
+    echo '                                            <option value="lk">Sri Lanka</option>'."\n";
+    echo '                                            <option value="sh">St Helena</option>'."\n";
+    echo '                                            <option value="pm">St Pierre and Miquelon</option>'."\n";
+    echo '                                            <option value="sd">Sudan</option>'."\n";
+    echo '                                            <option value="sr">Surinam</option>'."\n";
+    echo '                                            <option value="sj">Svalbard and Jan Mayen Island</option>'."\n";
+    echo '                                            <option value="sz">Swaziland</option>'."\n";
+    echo '                                            <option value="se">Sweden</option>'."\n";
+    echo '                                            <option value="ch">Switzerland</option>'."\n";
+    echo '                                            <option value="sy">Syrian Arab Republic</option>'."\n";
+    echo '                                            <option value="tw">Taiwan</option>'."\n";
+    echo '                                            <option value="tj">Tajikistan</option>'."\n";
+    echo '                                            <option value="tz">Tanzania</option>'."\n";
+    echo '                                            <option value="th">Thailand</option>'."\n";
+    echo '                                            <option value="nl">The Netherlands</option>'."\n";
+    echo '                                            <option value="tc">The Turks & Caicos Islands</option>'."\n";
+    echo '                                            <option value="tg">Togo</option>'."\n";
+    echo '                                            <option value="tk">Tokelau</option>'."\n";
+    echo '                                            <option value="to">Tonga</option>'."\n";
+    echo '                                            <option value="tt">Trinidad and Tobago</option>'."\n";
+    echo '                                            <option value="tn">Tunisia</option>'."\n";
+    echo '                                            <option value="tr">Turkey</option>'."\n";
+    echo '                                            <option value="tm">Turkmenistan</option>'."\n";
+    echo '                                            <option value="tv">Tuvalu</option>'."\n";
+    echo '                                            <option value="ug">Uganda</option>'."\n";
+    echo '                                            <option value="ua">Ukraine</option>'."\n";
+    echo '                                            <option value="ae">United Arab Emirates</option>'."\n";
+    echo '                                            <option value="uk">United Kingdom</option>'."\n";
+    echo '                                            <option value="us">United States</option>'."\n";
+    echo '                                            <option value="um">United States Minor Outlying</option>'."\n";
+    echo '                                            <option value="uy">Uruguay</option>'."\n";
+    echo '                                            <option value="su">USSR (former)</option>'."\n";
+    echo '                                            <option value="uz">Uzbekistan</option>'."\n";
+    echo '                                            <option value="vu">Vanuatu</option>'."\n";
+    echo '                                            <option value="ve">Venezuela</option>'."\n";
+    echo '                                            <option value="vn">Vietnam</option>'."\n";
+    echo '                                            <option value="vg">Virgin Islands British</option>'."\n";
+    echo '                                            <option value="vi">Virgin Islands U S</option>'."\n";
+    echo '                                            <option value="wf">Wallis and Futuna Islands</option>'."\n";
+    echo '                                            <option value="eh">Western Sahara</option>'."\n";
+    echo '                                            <option value="ye">Yemen</option>'."\n";
+    echo '                                            <option value="yu">Yugoslavia</option>'."\n";
+    echo '                                            <option value="zr">Zaire</option>'."\n";
+    echo '                                            <option value="cd">Zaire</option>'."\n";
+    echo '                                            <option value="zm">Zambia</option>'."\n";
+    echo '                                            <option value="zw">Zimbabwe</option>'."\n";
+    echo '    </select>'."\n";
+ 		echo '	  </TD></TR><TR vAlign=top><TD height="40" colspan="2">'."\n";
+   	echo '	  <label for="email"><br><span class="small">E-mail:</span> </label><br>'."\n";
+		echo '    <input type="text" id="email" name="email" value="'.stripslashes($email).'" tabindex="2" class="txt" size=25 />'."\n";
+		echo '	  </TR><TR vAlign=top> <TD height="40" colspan="2">'."\n";	
+   	echo '    <label for="function"><br><span class="small">Function: </span> </label><br>'."\n";
+		echo '    <input type="text" id="function" name="function" value="'.stripslashes($function ).'" tabindex="3" />'."\n";
+		echo '	   &nbsp; </TD></TR><TR vAlign=top><TD height="40" colspan="2">'."\n";
+    echo '    <label for="remarks"><br><span class="small">Remarks: </span></label><br>'."\n";
+		echo '    <textarea id="remarks" name="remarks" tabindex="4" cols="25" rows="7">'.stripslashes($remarks).'</textarea>'."\n";
+		echo '	  <br> &nbsp; </TD></TR><TR vAlign=top> <TD height="40" colspan="2">'."\n";
+    echo '    <div style="text-align:left;"><p><input type="submit" name="send" value="Send" class="envoi"/></p></div></TD>'."\n";
+    echo '    </TR><TR vAlign=top> <TD colspan="2"><p> &nbsp;&nbsp; </p><p>&nbsp;</p></TD></TR></TBODY></TABLE>'."\n";
+		echo '	'."\n"; 
+		echo '</form>'."\n";
+    echo ' </div> </td></tr></table>'."\n";
+	};
+
+?>
